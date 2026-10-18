@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAR SHOP // CODE FORGE CONSOLE</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0 !important; }
+        body { background: #000000; color: #00ff66; font-family: 'Courier New', Courier, monospace; padding: 10px; }
+        .console-container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        header { background: #111; border: 1px solid #333; padding: 10px; font-size: 0.9rem; font-weight: bold; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+        .panel { background: #0a0a0a; border: 1px solid #333; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        input[type="file"], input[type="password"], textarea { background: #000; color: #00ff66; border: 1px solid #444; padding: 8px; font-family: inherit; font-size: 0.85rem; outline: none; width: 100%; }
+        textarea { resize: vertical; }
+        #rawCode { height: 120px; }
+        #instruction { height: 50px; }
+        #finalCode { height: 400px; background: #050505; color: #fff; font-size: 0.8rem; line-height: 1.4; }
+        button { background: #00ff66; color: #000; border: none; padding: 10px; font-weight: bold; font-family: inherit; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+        button:hover { background: #00cc52; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; }
+        .status { font-size: 0.75rem; color: #ffaa00; }
+    </style>
+</head>
+<body>
+
+    <div class="console-container">
+        <header>
+            <span>// STAR SHOP CODE FORGE v4.1</span>
+            <span class="status" id="systemStatus">STATUS: READY</span>
+        </header>
+
+        <!-- एपीआई की सिक्योरिटी पैनल -->
+        <div class="panel">
+            <label>00. Groq API Key (लोकल सेव)</label>
+            <div style="display: flex; gap: 6px;">
+                <input type="password" id="apiKeyInput" placeholder="अपनी Groq API Key यहाँ दर्ज करें...">
+                <button onclick="saveApiKey()" style="padding: 0 15px;">SAVE</button>
+            </div>
+        </div>
+
+        <!-- ऊपर इनपुट पैनल -->
+        <div class="panel">
+            <div class="toolbar">
+                <label>01. लोकल फाइल लोड करें</label>
+                <input type="file" id="fileInput" accept=".html,.htm,.txt" onchange="loadFromFile(event)">
+            </div>
+            <textarea id="rawCode" placeholder="कच्चा HTML कोड यहाँ पेस्ट करें या ऊपर फाइल लोड करें..."></textarea>
+            <textarea id="instruction" placeholder="निर्देश दें (जैसे: बैच स्प्लिटर और एरो नेविगेशन जोड़ो)..."></textarea>
+            <button onclick="transformCode()">EXECUTE AI TRANSFORMATION</button>
+        </div>
+
+        <!-- नीचे आउटपुट पैनल -->
+        <div class="panel">
+            <div class="toolbar">
+                <label>02. फाइनल आउटपुट कंसोल (स्क्रॉल करें और कॉपी करें)</label>
+                <button onclick="copyOutput()" style="padding: 4px 8px; font-size: 0.7rem;">COPY CODE</button>
+            </div>
+            <textarea id="finalCode" placeholder="मॉडिफाइड और फाइनल कोड यहाँ जनरेट होगा..." readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+        // पेज लोड होते ही लोकल स्टोरेज से एपीआई की लोड करें
+        window.onload = function() {
+            const savedKey = localStorage.getItem('groq_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+                document.getElementById('systemStatus').textContent = "STATUS: API KEY LOADED";
+            }
+        };
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key) {
+                alert("कृपया वैध एपीआई की दर्ज करें!");
+                return;
+            }
+            localStorage.setItem('groq_api_key', key);
+            alert("✓ API Key आपके ब्राउज़र में सुरक्षित रूप से सेव हो गई है!");
+            document.getElementById('systemStatus').textContent = "STATUS: READY";
+        }
+
+        function loadFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.getElementById('systemStatus').textContent = `FILE LOADED: ${file.name}`;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('rawCode').value = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+
+        async function transformCode() {
+            const apiKey = localStorage.getItem('groq_api_key') || document.getElementById('apiKeyInput').value.trim();
+            const code = document.getElementById('rawCode').value.trim();
+            const instruction = document.getElementById('instruction').value.trim();
+            const outputArea = document.getElementById('finalCode');
+            const status = document.getElementById('systemStatus');
+
+            if (!apiKey) {
+                alert("एरर: पहले अपनी Groq API Key दर्ज करके सेव करें!");
+                return;
+            }
+
+            if (!code || !instruction) {
+                alert("एरर: कोड और निर्देश दोनों आवश्यक हैं।");
+                return;
+            }
+
+            status.textContent = "STATUS: PROCESSING...";
+            outputArea.value = "// AI इंजन कोड री-इंजीनियर कर रहा है, प्रतीक्षा करें...";
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": "llama-3.1-8b-instant",
+                        "messages": [
+                            {"role": "system", "content": "You are an elite expert programmer. Modify the given HTML code strictly according to the user instruction. Return only the clean, updated HTML code without markdown formatting blocks."},
+                            {"role": "user", "content": `Instruction: ${instruction}\n\nExisting Code:\n${code}`}
+                        ],
+                        "temperature": 0.2
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+                const data = await response.json();
+                let updatedCode = data.choices[0].message.content;
+                updatedCode = updatedCode.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
+
+                outputArea.value = updatedCode;
+                status.textContent = "STATUS: SUCCESS";
+            } catch (err) {
+                outputArea.value = `// क्रिटिकल एरर: ${err.message}`;
+                status.textContent = "STATUS: ERROR";
+            }
+        }
+
+        function copyOutput() {
+            const text = document.getElementById('finalCode').value;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("✓ कोड क्लिपबोर्ड पर कॉपी हो गया!");
+            });
+        }
+    </script>
+</body>
+</html>
