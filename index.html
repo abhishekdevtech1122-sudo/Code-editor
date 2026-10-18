@@ -3,34 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STAR SHOP // CODE FORGE CONSOLE</title>
+    <title>STAR SHOP // TYPEWRITER CODE FORGE</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0 !important; }
         body { background: #000000; color: #00ff66; font-family: 'Courier New', Courier, monospace; padding: 10px; }
-        .console-container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        .console-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
         header { background: #111; border: 1px solid #333; padding: 10px; font-size: 0.9rem; font-weight: bold; color: #fff; display: flex; justify-content: space-between; align-items: center; }
         .panel { background: #0a0a0a; border: 1px solid #333; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         input[type="file"], input[type="password"], textarea { background: #000; color: #00ff66; border: 1px solid #444; padding: 8px; font-family: inherit; font-size: 0.85rem; outline: none; width: 100%; }
         textarea { resize: vertical; }
-        #rawCode { height: 120px; }
-        #instruction { height: 50px; }
+        #rawCode { height: 110px; }
+        #instruction { height: 45px; }
         #finalCode { height: 400px; background: #050505; color: #fff; font-size: 0.8rem; line-height: 1.4; }
         button { background: #00ff66; color: #000; border: none; padding: 10px; font-weight: bold; font-family: inherit; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
         button:hover { background: #00cc52; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; }
         .status { font-size: 0.75rem; color: #ffaa00; }
+        .btn-row { display: flex; gap: 6px; }
     </style>
 </head>
 <body>
 
     <div class="console-container">
         <header>
-            <span>// STAR SHOP CODE FORGE v4.1</span>
+            <span>// STAR SHOP CODE FORGE v4.4 [TYPEWRITER ENGINE]</span>
             <span class="status" id="systemStatus">STATUS: READY</span>
         </header>
 
-        <!-- एपीआई की सिक्योरिटी पैनल -->
+        <!-- एपीआई की पैनल -->
         <div class="panel">
             <label>00. Groq API Key (लोकल सेव)</label>
             <div style="display: flex; gap: 6px;">
@@ -39,7 +40,7 @@
             </div>
         </div>
 
-        <!-- ऊपर इनपुट पैनल -->
+        <!-- इनपुट पैनल -->
         <div class="panel">
             <div class="toolbar">
                 <label>01. लोकल फाइल लोड करें</label>
@@ -50,20 +51,22 @@
             <button onclick="transformCode()">EXECUTE AI TRANSFORMATION</button>
         </div>
 
-        <!-- नीचे आउटपुट पैनल -->
+        <!-- आउटपुट और फुल-स्क्रीन प्रीव्यू पैनल -->
         <div class="panel">
-            <div class="toolbar">
-                <label>02. फाइनल आउटपुट कंसोल (स्क्रॉल करें और कॉपी करें)</label>
-                <button onclick="copyOutput()" style="padding: 4px 8px; font-size: 0.7rem;">COPY CODE</button>
+            <div class="toolbar" style="margin-bottom: 4px;">
+                <label>02. फाइनल आउटपुट कंसोल (टाइपराइटर लाइव स्ट्रीम)</label>
+                <div class="btn-row">
+                    <button onclick="launchFullScreenPreview()" style="padding: 4px 8px; font-size: 0.7rem; background: #ffaa00; color: #000;">🌐 LAUNCH FULL-SCREEN</button>
+                    <button onclick="copyOutput()" style="padding: 4px 8px; font-size: 0.7rem;">COPY CODE</button>
+                </div>
             </div>
-            <textarea id="finalCode" placeholder="मॉडिफाइड और फाइनल कोड यहाँ जनरेट होगा..." readonly></textarea>
+            <textarea id="finalCode" placeholder="मॉडिफाइड और फाइनल कोड यहाँ टाइपराइटर स्टाइल में प्रकट होगा..." readonly></textarea>
         </div>
     </div>
 
     <script>
         const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-        // पेज लोड होते ही लोकल स्टोरेज से एपीआई की लोड करें
         window.onload = function() {
             const savedKey = localStorage.getItem('groq_api_key');
             if (savedKey) {
@@ -112,7 +115,7 @@
             }
 
             status.textContent = "STATUS: PROCESSING...";
-            outputArea.value = "// AI इंजन कोड री-इंजीनियर कर रहा है, प्रतीक्षा करें...";
+            outputArea.value = "// AI इंजन सोच रहा है...";
 
             try {
                 const response = await fetch(API_URL, {
@@ -137,12 +140,47 @@
                 let updatedCode = data.choices[0].message.content;
                 updatedCode = updatedCode.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
 
-                outputArea.value = updatedCode;
-                status.textContent = "STATUS: SUCCESS";
+                status.textContent = "STATUS: WRITING...";
+                
+                // टाइपराइटर इफेक्ट फंक्शन कॉल करें
+                typeWriterEffect(updatedCode, outputArea, () => {
+                    status.textContent = "STATUS: SUCCESS";
+                });
+
             } catch (err) {
                 outputArea.value = `// क्रिटिकल एरर: ${err.message}`;
                 status.textContent = "STATUS: ERROR";
             }
+        }
+
+        // टाइपराइटर इफेक्ट इंजन (कटर-कटर लाइव टाइपिंग)
+        function typeWriterEffect(text, element, callback) {
+            element.value = "";
+            let i = 0;
+            const speed = 3; // गति (कम संख्या = तेज टाइपिंग)
+            
+            function type() {
+                if (i < text.length) {
+                    element.value += text.charAt(i);
+                    element.scrollTop = element.scrollHeight; // ऑटो-स्क्रॉल नीचे की तरफ
+                    i++;
+                    setTimeout(type, speed);
+                } else {
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        function launchFullScreenPreview() {
+            const code = document.getElementById('finalCode').value.trim();
+            if (!code) {
+                alert("प्रीव्यू दिखाने के लिए कोई कोड उपलब्ध नहीं है!");
+                return;
+            }
+            const blob = new Blob([code], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
         }
 
         function copyOutput() {
